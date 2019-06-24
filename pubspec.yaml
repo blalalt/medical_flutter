@@ -1,0 +1,96 @@
+name: hello_world # 应用或者包的名称
+description: A new Flutter project. # 应用或者包的描述
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+version: 1.0.0+1 # 应用或者包的版本号
+
+environment: 
+  sdk: ">=2.1.0 <3.0.0"
+
+#---------------------------------------------------------------------------------------------------------------
+# 如果我们的Flutter应用本身依赖某个包，我们需要将所依赖的包添加到dependencies 下
+
+# Pub（https://pub.dartlang.org/ ）是Google官方的Dart Packages仓库，类似于node中的npm仓库
+# 可以在上面查找我们需要的包和插件，也可以向pub发布我们的包和插件
+
+# 在下面写好依赖项之后，可以运行 flutter packages get 来进行更新 来下载依赖包
+dependencies:
+  flutter: # 应用或包依赖的其它包或插件
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^0.1.2
+  english_words: ^3.1.0
+  keyboard_avoider: ^0.1.2
+  provider: ^2.0.1+1
+  dio: ^2.1.0
+  flutter_easyrefresh: ^1.2.7
+# 上面的方式是依赖pub仓库的，此外，我们还可以依赖本地包，git包
+# dependencies:
+#     pkg1:
+#         path: ../../code/pkg1
+
+# dependencies:
+#   package1:
+#     git:
+#       url: git://github.com/flutter/packages.git
+#       path: packages/package1
+#---------------------------------------------------------------------------------------------------------------
+
+
+dev_dependencies: # 开发环境依赖的工具包（而不是flutter应用本身依赖的包）
+  flutter_test:
+    sdk: flutter
+
+
+# For information on the generic Dart part of this file, see the
+# following page: https://www.dartlang.org/tools/pub/pubspec
+
+# The following section is specific to Flutter.
+flutter: # flutter相关的配置选项
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+   - images/1.jpg
+   - images/2.jpg
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/assets-and-images/#resolution-aware.
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/assets-and-images/#from-packages
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/custom-fonts/#from-packages
