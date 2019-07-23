@@ -1,29 +1,54 @@
 // 导入包
 import 'dart:developer';
-
-import 'package:english_words/english_words.dart';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:hello_world/disease_search.dart';
+import 'package:dio/dio.dart';
+import 'package:hello_world/http.dart';
+
+
+
+
+class MyGlobals {
+  GlobalKey _scaffoldKey;
+  MyGlobals() {
+    _scaffoldKey = GlobalKey();
+  }
+  GlobalKey get scaffoldKey => _scaffoldKey;
+}
+
+MyGlobals myGlobals = new MyGlobals();
 
 // 应用入口，主要用来启动flutter 应用
-void main() => runApp(
-        // MultiProvider(
-        //   providers: [
-        //     ChangeNotifierProvider<Messages>.value(
-        //       notifier: Messages(),
-        //     ),
-        //     ChangeNotifierProvider<Diseases>.value(
-        //       notifier: Diseases(),
-        //     ),
-        //   ],
-        //   child: new MyApp(),
-        // )
-        ChangeNotifierProvider<Messages>.value(
-      child: new MyApp(),
-      notifier: Messages(),
-    ));
+void main() {
+  runApp(
+    // MultiProvider(
+    //   providers: [
+    //     ChangeNotifierProvider<Messages>.value(
+    //       notifier: Messages(),
+    //     ),
+    //     ChangeNotifierProvider<Diseases>.value(
+    //       notifier: Diseases(),
+    //     ),
+    //   ],
+    //   child: new MyApp(),
+    // )
+      ChangeNotifierProvider<Messages>.value(
+        child: new MyApp(),
+        notifier: Messages(),
+      ));
+  if (Platform.isAndroid) {
+    // 以下两行 设置android状态栏为透明的沉浸。写在组件渲染之后，是为了在渲染后进行set赋值，覆盖状态栏，写在渲染之前MaterialApp组件会覆盖掉这个值。
+    SystemUiOverlayStyle systemUiOverlayStyle =
+    SystemUiOverlayStyle(statusBarColor: Colors.transparent);
+    SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
+  }
+}
 
 class MyApp extends StatelessWidget {
   // MyApp 是一个flutter 应用
@@ -37,151 +62,15 @@ class MyApp extends StatelessWidget {
     return new MaterialApp(
       title: 'AI医生',
       theme: new ThemeData(
-        primarySwatch: Colors.blue,
+        primaryColor: Colors.amberAccent,
       ),
       home: InputPage(), //home 为Flutter应用的首页，它也是一个widget
-
+      debugShowCheckedModeBanner: false, // 去除DEBUG
       // 注册命名路由
       routes: {
-        'new_page': (context) => NewRoute(),
-        'new_page2': (context) => ArgsRoute(),
-        'random_words': (context) => RandomWords(),
         'input_page': (context) => InputPage(),
         'search_page': (context) => RetrivePage(),
       },
-    );
-  }
-}
-
-// MyHomePage 是应用的首页，它继承自StatefulWidget类，表示它是一个有状态的widget
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-  final String title;
-
-  @override
-  _MyHomePageState createState() => new _MyHomePageState();
-}
-
-// _MyHomePageState类是MyHomePage类对应的状态类
-class _MyHomePageState extends State<MyHomePage> {
-  int _couter = 0; // 状态
-
-  // 状态改变函数
-  void _incrementCounter() {
-    setState(() {
-      // setState方法的作用是通知Flutter框架，有状态发生了改变，Flutter框架收到通知后，会执行build方法来根据新的状态重新构建界面
-      _couter++;
-    });
-  }
-
-  // 当MyHomePage第一次创建时，_MyHomePageState类会被创建，当初始化完成后，
-  // Flutter框架会调用Widget的build方法来构建widget树，最终将widget树渲染到设备屏幕上
-  @override
-  Widget build(BuildContext context) {
-    // TODO: implement build
-    // Scaffold 是Material库中提供的页面脚手架，
-    // 它包含导航栏和Body以及FloatingActionButton（如果需要的话）。 本书后面示例中，路由默认都是通过Scaffold创建。
-    // 提供了默认的导航栏、标题和包含主屏幕widget树的body属性。widget树可以很复杂
-    return new Scaffold(
-        appBar: new AppBar(
-          title: new Text(widget.title),
-          elevation: 0,
-        ),
-        drawer: new Drawer(child: DrawerBuild.drawer(context)),
-        body: InputPage());
-  }
-}
-
-class NewRoute extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: new AppBar(
-        title: Text('新的页面'),
-      ),
-      body: new Center(
-        child: Text('新的页面'),
-      ),
-    );
-  }
-}
-
-// 带参数的路由
-class ArgsRoute extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // 通过以下方式，获取路由参数
-    String args = ModalRoute.of(context).settings.arguments;
-    return Scaffold(
-      body: new Center(
-          child: new Text(
-        args,
-      )),
-    );
-  }
-}
-
-class RandomWords extends StatefulWidget {
-  @override
-  _RandomWordsState createState() => _RandomWordsState();
-}
-
-class _RandomWordsState extends State<RandomWords> {
-  final _suggestions = <WordPair>[];
-  final _textStyle = const TextStyle(fontSize: 18.0);
-  final _saved = new Set<WordPair>();
-
-  Widget _buildListRow(WordPair pair) {
-    final _alreadySaved = _saved.contains(pair);
-    return new ListTile(
-      title: new Text(
-        pair.asPascalCase,
-        style: _textStyle,
-      ),
-      trailing: new Icon(
-        _alreadySaved ? Icons.favorite : Icons.favorite_border,
-        color: _alreadySaved ? Colors.red : null,
-      ),
-      onTap: () {
-        setState(() {
-          if (_alreadySaved) {
-            _saved.remove(pair);
-          } else {
-            _saved.add(pair);
-          }
-        });
-      },
-    );
-  }
-
-  Widget _buildSugList() {
-    // ListView类提供了一个builder属性，itemBuilder 值是一个匿名回调函数， 接受两个参数- BuildContext和行迭代器i
-
-    return new ListView.builder(
-      itemBuilder: (context, i) {
-        // 对于List中的每个元素，都会调用itemBuilder函数一次
-        if (i.isOdd) return new Divider(); // 奇数行，添加一个分割线
-
-        //偶数行
-        final index = i ~/ 2; // 获取当前位置
-        if (index >= _suggestions.length) {
-          // 如果是最后一个，则插入新的
-          _suggestions.addAll(generateWordPairs().take(10));
-        }
-        return _buildListRow(_suggestions[index]);
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: new AppBar(
-        title: Text('随机单词'),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: _buildSugList(), // scaffold -> body -> list -> listtile
     );
   }
 }
@@ -196,7 +85,7 @@ class DrawerBuild {
         new ClipRect(
           child: new ListTile(
             leading: new Icon(Icons.home),
-            title: new Text('患者自诊'),
+            title: new Text('自助服务'),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(context).pushNamed('input_page');
@@ -214,7 +103,7 @@ class DrawerBuild {
         new AboutListTile(
           icon: new Icon(Icons.apps),
           child: new Text("关于"),
-          applicationName: "随身医生",
+          applicationName: "小医",
           applicationVersion: "1.0",
           applicationIcon: new Image.asset(
             "images/1.jpg",
@@ -223,8 +112,8 @@ class DrawerBuild {
           ),
           applicationLegalese: "applicationLegalese",
           aboutBoxChildren: <Widget>[
-            new Text("Blalalt@163.com"),
-            new Text("！！！！")
+            new Text("创新大赛作品!"),
+//            new Text("！！！！")
           ],
         ),
       ],
@@ -233,36 +122,109 @@ class DrawerBuild {
 
   static Widget _header() {
     return new UserAccountsDrawerHeader(
-      accountEmail: Text(''),
-      accountName: Text(''),
+      accountEmail: Text('150*******'),
+      accountName: Text('XXX 女 22岁'),
       decoration: new BoxDecoration(
         // //用一个BoxDecoration装饰器提供背景图片
         image: new DecorationImage(
-            fit: BoxFit.cover, image: ExactAssetImage('images/1.jpg')),
+            fit: BoxFit.cover, image: ExactAssetImage('images/2.jpg')),
       ),
     );
   }
 }
 
+
 // 聊天页
 class InputPage extends StatelessWidget {
+
+  final List<String> schemas = ['闲聊模式', '问诊模式', "导诊模式", "问答模式"];
+
   @override
   Widget build(BuildContext context) {
+    var headerTitle = schemas[int.parse(Provider.of<Messages>(context).schema)-1];
     return Scaffold(
-      appBar: AppBar(
+      appBar: PreferredSize(
+          preferredSize: Size(double.infinity, 50),
+        child: AppBar(
+        toolbarOpacity: 0.7,
+        elevation: 1,
         centerTitle: true,
-        title: Text('智能问诊'),
-      ),
+        title: Text(headerTitle),
+        actions: <Widget>[
+          new PopupMenuButton(
+            onSelected: (String value){
+               Provider.of<Messages>(context).changeSchema(value);
+            },
+              itemBuilder: (BuildContext context) =><PopupMenuItem<String>>[
+                new PopupMenuItem(
+                    value:"1",
+                    child: new Text("小医闲聊")
+                ),
+                new PopupMenuItem(
+                  value: "2",
+                    child: new Text("小医问诊")
+                ),
+                new PopupMenuItem(
+                  value: "3",
+                    child: new Text("小医导诊")
+                ),
+                new PopupMenuItem(
+                  value: "4",
+                    child: new Text("小医问答")
+                )
+              ]
+          )
+        ],
+      )),
       drawer: new Drawer(child: DrawerBuild.drawer(context)),
-      body: Container(
-          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 5),
-          child: Column(children: <Widget>[
-            Expanded(child: ChatMessage(), flex: 9),
-            ChatInput()
-          ])),
+      key: myGlobals.scaffoldKey,
+      body: GestureDetector(
+              onTap: (){
+                // 点击空白页面关闭键盘
+                FocusScope.of(context).requestFocus(FocusNode());
+              },
+              child:  Container(
+                padding: EdgeInsets.symmetric(vertical: 0, horizontal: 5),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                  Flexible(child: ChatMessage()),
+                      new Divider(height: 1.0),
+                  Container(
+                      decoration: new BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                      ),
+                      child: ChatInput(),
+                  )
+
+                ]))
+              ),
     );
   }
 }
+
+Future<Map> getResp(String msg, String type, BuildContext context) async {
+  var context = myGlobals.scaffoldKey.currentContext;
+
+  var res;
+  try {
+    Response response =
+    await dio.get("/chat", queryParameters: {
+      'msg': msg,
+      'type': type,
+    });
+    res = response.data;
+    print('origin get resp: ');
+    print(res);
+//    return res;
+    Provider.of<Messages>(context).add(res['data']);
+  } catch (e) {
+    print(e);
+  }
+  return res;
+}
+
 
 class ChatInput extends StatefulWidget {
   @override
@@ -272,9 +234,16 @@ class ChatInput extends StatefulWidget {
 class _ChatInputState extends State<ChatInput> {
   final TextEditingController _textController = new TextEditingController();
 
-  void _handleSubmitted(BuildContext context, String text) {
+  void _handleSubmitted(BuildContext context, String text) { // 发送消息
     _textController.clear();
-    Provider.of<Messages>(context).add({'data': text, 'type': '1'});
+    Provider.of<Messages>(context).add({'data': text, 'type': '0'});
+    var textType = Provider.of<Messages>(context).schema;
+    getResp(text, textType, context);//.then((result){
+//      print(result);
+//      print('getResp: ');
+//      print(result);
+//      Provider.of<Messages>(context).addMany([{'data': text, 'type': '0'}, result['data']]);
+//    });
   }
 
   bool inputByText = true;
@@ -289,7 +258,7 @@ class _ChatInputState extends State<ChatInput> {
     if (inputByText) {
       return new TextField(
         onChanged: (val) {
-          print(val);
+//          print(val);
         },
         controller: _textController,
 
@@ -376,15 +345,65 @@ class ChatMessage extends StatefulWidget {
 
 class _ChatMessageState extends State<ChatMessage> {
   // var _messages = Provider.of<Messages>(context).messages;
+  var _choices = <Widget>[];
+  Widget _buildBottomSheet(List<String> args, bool multi) {
+    for (var index=0; index < args.length; index++) {
+      var inp = ChipInputSelect(index: index, choice: args[index], multi: multi, widget: null,);
+      _choices.add(inp);
+    }
 
-  Widget _buildMessageUI(info) {
+    return GestureDetector(
+                        child: Container(
+                          child: Column(
+                            children: <Widget>[
+                              Flexible(
+                                child: Wrap(
+                                  children: _choices,
+                                ),
+                                flex: 9,
+                              ),
+                              RaisedButton(
+                                child: Text('确定'),
+                                textColor: Colors.white,
+                                color: Colors.blue,
+                                onPressed: () {}
+                              )
+                            ],
+                          ),
+                        ),
+                        onTap: () => false,
+    );
+  }
+
+  Widget _buildMessageUI(context, info) {
+    var context = myGlobals.scaffoldKey.currentContext;
     if (info['type'] == '2') {
+      print('info_type==2');
+      print(info);
       // 回复
       return ResponseUI(Text(
         info['data'],
         textAlign: TextAlign.start,
       ));
-    } else if (info['type'] == '1') {
+    } else if (info['type'] == '5') {
+      // 问诊结果
+//      Provider.of<Messages>(context).add({'type': '2', 'data': '小医正在为您生成结果，请稍等～'});
+      // 暂停一秒
+      print('into type == 5: ');
+      print(info);
+      var syptoms = info['data']['syptoms'];
+      var diseases = info['data']['diseases'];
+
+      var resultPgeLink = GestureDetector(
+        onTap: ()=> Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (context) =>
+                    ResultPage(syptoms: syptoms, result: diseases))),
+        child: Text("点击查看诊断结果"),
+      );
+      return ResponseUI(resultPgeLink);
+//      Provider.of<Messages>(context).add({'type': '2', 'data': '小医正在为您生成结果，请稍等～'});
+    } else if (info['type'] == '0') {
       // 发送
       return SendUI(
         Text(
@@ -393,13 +412,19 @@ class _ChatMessageState extends State<ChatMessage> {
         ),
       );
     } else if (info['type'] == '3') {
+      print('type==3');
+      print(info);
+      print('info_data');
+      print(info['data']);
       // 症状选择
-      List<String> radio_list = info['radio_list'].toString().split(',');
-      Map<String, bool> map = new Map.fromIterable(radio_list,
+//      List<String> radio_list = info['data'];
+      bool multi = info['multi'];
+      // return _buildBottomSheet(radio_list, multi);
+      Map<String, bool> map = new Map.fromIterable(info['data'],
             key: (item) => item.toString(),
             value: (item) => false);
-      return ResponseUI(SymptomInput(map));
-    } else if (info['type'] == '4') {
+      return ResponseUI(SymptomInput(map, info['msg']));
+    } else if (info['type'] == '1') {
       //疾病信息
       return Row(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -423,7 +448,7 @@ class _ChatMessageState extends State<ChatMessage> {
                       textAlign: TextAlign.left,
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                    ),
+                     ),
                     padding: EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                   ),
                   Container(
@@ -451,7 +476,7 @@ class _ChatMessageState extends State<ChatMessage> {
                       onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (context) =>
-                                  DiseaseDetail(int.parse(info['id'])))),
+                                  DiseaseDetail(info['id']))),
                     ),
                     alignment: Alignment.centerRight,
                   ),
@@ -461,67 +486,206 @@ class _ChatMessageState extends State<ChatMessage> {
       );
       
     }
+    else if (info['type'] == '4') {// 切换信息
+      return Column( 
+        // mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+          width: 200,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+          ),
+          child: RichText(
+            text: TextSpan(
+              text: '您已切换到',
+              style: TextStyle(color: Colors.white),
+              children: [
+                TextSpan(text: info['data'], 
+                  style: TextStyle(color: Colors.red[900], fontSize: 15)
+                )
+              ]
+            ),
+          ),
+        )]);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-        padding: EdgeInsets.all(10.0),
+        padding: EdgeInsets.only(left: 10, right: 10, bottom: 3),
         child: ListView.builder(
             // padding: EdgeInsets.symmetric(vertical: 2),
             // itemExtent: 40,
-            shrinkWrap: true,
+            shrinkWrap: false,
+            reverse: true,
             itemBuilder: (context, index) {
-              if (index >= Provider.of<Messages>(context).messages.length) {
+              var length = Provider.of<Messages>(context).messages.length;
+              if (index >= length) {
                 return null;
               }
+              var info = Provider.of<Messages>(context).messages[length-1-index];
               return Column(
-                children: <Widget>[
-                  _buildMessageUI(
-                      Provider.of<Messages>(context).messages[index]),
-                  Container(
-                    height: 10,
-                  ),
-                ],
+                  verticalDirection: VerticalDirection.up,
+                  // crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    _buildMessageUI(context, info),
+                    Container(
+                      height: 10,
+                    ),
+                  ],
               );
+              // if (info['type'] == '3') {
+              //   showBottomSheet(context: context, builder: (context) { 
+              //     List<String> radio_list = info['radio_list'].toString().split(',');
+              //     bool multi = info['multi'];
+              //     return  _buildBottomSheet(radio_list, multi);});
+              //   return null;
+              // }
+              // else {return Column(
+              //     verticalDirection: VerticalDirection.up,
+              //     // crossAxisAlignment: CrossAxisAlignment.end,
+              //     children: <Widget>[
+              //       _buildMessageUI(context, info),
+              //       Container(
+              //         height: 10,
+              //       ),
+              //     ],
+              // );}
             }));
   }
 }
 
 class Messages with ChangeNotifier {
-  var _messages = <Map<String, String>>[
+
+  /*******************************聊天信息*************************************************** */
+
+  // schemas
+  // 1.闲聊模式  2. 问诊模式  3. 导诊模式   4. 问答模式
+  final List<String> schemas = ['闲聊模式', '问诊模式', "导诊模式", "问答模式"];
+
+  // message
+  // 0. 发送的消息   1. 回复(疾病概念)  2. 回复(普通文字回复)
+  // 3. 回复(问诊选择症状)  4. 系统消息
+  var _messages = <Map<String, dynamic>>[
     {
-      'data': '你好啊',
+      'data': '您好,我是小医~',
       'type': '2',
       'time': '2019年6月12',
     },
-    {
-      'data': '你好',
-      'type': '1',
-      'time': '2019年6月12',
-    },
-    {
-      'title': '小儿发烧',
-      'desc':
-          '2017年4月28日 - Flutter有一个丰富的布局控件库,但我们只学习最常用的一些,目的是使你可以尽快开始...ListTile最常用于Card或ListView,还可以在别的地方使用。展开阅',
-      'type': '4',
-      'time': '2019年6月12',
-      'id': '1'
-    },
-    {
-      'data': '',
-      'radio_list': '发烧,咳嗽,感冒,流鼻涕',
-      'type': '3',
-      'time': '2019年6月12',
-      'desc': '请问您是否还有以下症状呢?'
-    }
+//    {
+//      'data': '有点发烧怎么办',
+//      'type': '0',
+//      'time': '2019年6月12',
+//    },
+//    {
+//      'title': '小儿发烧',
+//      'desc': '发热（fever）是指体温超过正常范围高限，是小儿十分常见的一种症状。正常小儿腋表体温为36℃～37℃（肛表测得的体温比口表高约0.3℃，口表测得的体温比腋表高约0.4℃），腋表如超过37.4℃可认为是发热。在多数情况下，发热是身体对抗入侵病原的一种保护性反应，是人体正在发动免疫系统抵抗感染的一个过程。体温的异常升高与疾病的严重程度不一定成正比，但发热过高或长期发热可影响机体各种调节功能，从而影响小儿的身体健康，因此，对确认发热的孩子，应积极查明原因，针对病因进行治疗。',
+//      'type': '1',
+//      'time': '2019年6月12',
+//      // 'id': '1'
+//    },
+//    {
+//      'data': ['头痛','头晕','咳嗽','流鼻涕'],
+//      'type': '3',
+//      'time': '2019年6月12',
+//      'desc': '请问您是否还有以下症状呢?'
+//    }
   ];
-  void add(Map<String, String> data) {
+  String schema = '1'; // 闲聊模式
+  void changeSchema(String value) {
+    if (schema == value){ return null; }
+    schema = value;
+    add({'data': schemas[int.parse(schema)-1], 'type': '4'});
+  }
+  void addMany(List<Map<String, dynamic>>many) {
+    print(many);
+    _messages.addAll(many);
+    notifyListeners();
+  }
+  void add(Map<String, dynamic> data) {
     _messages.add(data);
     notifyListeners();
   }
 
   get messages => _messages;
+
+  /*******************************聊天信息*************************************************** */
+
+
+
+  /*******************************用户信息(导诊)*************************************************** */
+
+  Map<String, String> userInfo;
+  /*******************************用户信息(导诊)*************************************************** */
+
+
+  /*******************************症状输入(问诊)*************************************************** */
+  List<bool> thisStepSelected = []; // 下标代表元素， true代表选中
+  List<String> thisChoices = [];
+
+  void initChoice(List<String> symptoms) {
+    for (var i=0; i<symptoms.length; i++) {
+      thisChoices[i] = symptoms[i];
+      thisStepSelected[i] = false;
+    }
+  }
+
+  void onSelectedChanged(int index, {bool multi: false}) {
+    if (multi) { // 支持多选
+      // 如果已经选中，取消操作, 否则选中
+      thisStepSelected[index] = !thisStepSelected[index];
+    
+    }else { // 单选
+      // 把其他选项全置0，表示未选中
+      for(var i=0; i<thisStepSelected.length; i++) {
+        thisStepSelected[i] = false;
+      }
+      thisStepSelected[index] = true;
+    }
+    notifyListeners();
+  }
+
+  bool isSelected(int index) {
+    return thisStepSelected[index];
+  }
+  /*******************************症状输入(问诊)*************************************************** */
+}
+
+class ChipInputSelect extends StatelessWidget {
+  const ChipInputSelect(
+      {@required this.index,
+      @required this.widget,
+      @required this.choice,
+      @required this.multi})
+      : super();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: ChoiceChip(
+          label: Text(choice),
+          //未选定的时候背景
+          selectedColor: Color(0xff182740),
+          //被禁用得时候背景
+          disabledColor: Colors.grey[300],
+          labelStyle: TextStyle(fontWeight: FontWeight.w200, fontSize: 15.0),
+          labelPadding: EdgeInsets.only(left: 8.0, right: 8.0),
+          materialTapTargetSize: MaterialTapTargetSize.padded,
+          onSelected: (bool value) {
+            Provider.of<Messages>(context).onSelectedChanged(index, multi: this.multi);
+          },
+          selected: Provider.of<Messages>(context).isSelected(index)),
+    );
+  }
+
+  final int index;
+  final widget;
+  final String choice;
+  final bool multi;
 }
 
 class ResponseUI extends StatelessWidget {
@@ -592,25 +756,28 @@ class SendUI extends StatelessWidget {
 
 class SymptomInput extends StatefulWidget {
   Map<String, bool> tiles;
-  SymptomInput(this.tiles);
+  String msg;
+  SymptomInput(this.tiles, this.msg);
   @override
-  _SymptomInputState createState() => _SymptomInputState(tiles);
+  _SymptomInputState createState() => _SymptomInputState(tiles, msg);
 }
 
 class _SymptomInputState extends State<SymptomInput> {
   Map<String,bool> tiles;
+  String msg;
   bool alreadyUp = false;
   String checked = '';
-  _SymptomInputState(this.tiles);
-  List<Widget> _buildTile() {
+  _SymptomInputState(this.tiles, this.msg);
+
+  List<Widget> _buildTile(BuildContext context) {
     var radioListTiles = <Widget>[];
     radioListTiles.add(Text(
-      '请问您是否还有以下症状呢?',
+      msg,
       softWrap: true,
     ));
     for (var tile in tiles.keys) {
       radioListTiles.add( ConstrainedBox(
-      constraints: BoxConstraints.tightFor(width: 150, height: 35.0),
+      constraints: BoxConstraints.tightFor(width: 170, height: 35.0),
       child: CheckboxListTile(
         // dense: true,
         value: tiles[tile],
@@ -619,7 +786,7 @@ class _SymptomInputState extends State<SymptomInput> {
         title: Text(tile),
         onChanged: (value) {
           setState(() {
-            tiles[tile] = !tiles[tile]; 
+            tiles[tile] = !tiles[tile];
           });
         },
       )));
@@ -645,7 +812,15 @@ class _SymptomInputState extends State<SymptomInput> {
               if (tiles[t]) symptomList.add(t);
             }
             var symptomStr = symptomList.join(',');
-            Provider.of<Messages>(context).add({'data': symptomStr, 'type': '1'});
+            var textType = Provider.of<Messages>(context).schema;
+
+            Provider.of<Messages>(context).add({'data': symptomStr, 'type': '0'});
+            print('after provider: ');
+            print(symptomStr);
+            getResp(symptomStr, textType, context);
+//                .then((result){
+//              Provider.of<Messages>(context).addMany([{'data': symptomStr, 'type': '0'}, result['data']]);
+//            });
           }
         ),
         alignment: Alignment.centerRight,
@@ -657,7 +832,121 @@ class _SymptomInputState extends State<SymptomInput> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: _buildTile(),
+      children: _buildTile(context),
+    );
+  }
+}
+
+class ResultPage extends StatelessWidget {
+  final List<dynamic> syptoms;
+  final List<dynamic> result;
+
+  const ResultPage({@required this.syptoms, @required this.result}) : super();
+
+  List<Widget> _buildPage(BuildContext context) {
+    var syptoms_str = syptoms.join('、');
+    var pageElements = <Widget>[];
+
+    var headerInfo = RichText(
+      text: TextSpan(
+          text: '主诉',
+          style: TextStyle(color: Colors.redAccent),
+          children: [
+            TextSpan(text: syptoms_str),
+          ]),
+    );
+
+    pageElements.add(headerInfo);
+    print(result);
+    print(syptoms_str);
+    for(var i=0; i<result.length; i++) {
+      var title = (i+1).toString()+'.'+result[i]['title'];
+      pageElements.add(
+          Card(
+            elevation: 4.0,
+            color: Colors.white,
+            child: Text(title, style: TextStyle(fontWeight: FontWeight.bold),),
+          )
+      );
+    }
+    return pageElements;
+  }
+
+  Widget _buildCard(info, index) {
+    var context = myGlobals.scaffoldKey.currentContext;
+    print('_buildCard(info): ');
+    print(info);
+    return new Container(
+        child: Card(
+          elevation: 2.0,
+          color: Colors.white,
+          child: new Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                dense: false,
+                title: Container(
+                  child: Text(
+                    (index+1).toString() + '. ' + info['title'],
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                ),
+                subtitle: Container(
+                  child: Text(
+                    info['data'],
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                ),
+                onTap: ()=> Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            DiseaseDetail(info['id']))),
+              ),
+            ],
+          ),
+        ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var syptoms_str = syptoms.join('、');
+    return Scaffold(
+        appBar: AppBar(
+          title: Text('小医问诊结果'),
+        ),
+        body: Container(
+          padding: EdgeInsets.all(10),
+          child: Column(
+
+          children: [
+            Container(
+              child: RichText(
+                text: TextSpan(
+                    text: '主诉: ',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 20),
+                    children: [
+                      TextSpan(text: syptoms_str, style: TextStyle(color: Colors.black, fontSize: 16)),
+                    ]),
+              ),
+            ),
+
+            Expanded(
+              child: ListView.builder(
+                  shrinkWrap: true,
+                //ListView的Item
+                  itemBuilder: (context, index) {
+                    if (index >= result.length) {
+                      return null;
+                    }
+                    return _buildCard(result[index], index);
+                  }),
+            )
+
+        ])
+        )
     );
   }
 }

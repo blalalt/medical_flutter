@@ -1,22 +1,58 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
+import 'package:provider/provider.dart';
+import 'package:hello_world/http.dart';
 import 'package:flutter_easyrefresh/easy_refresh.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 
-void getData(String search_text, int page) async {
+Widget loading() {
+  return new Stack(
+    children: <Widget>[
+      new Padding(
+        padding: new EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 35.0),
+        child: new Center(
+          child: SpinKitFadingCircle(
+            color: Colors.blueAccent,
+            size: 30.0,
+          ),
+        ),
+      ),
+      new Padding(
+        padding: new EdgeInsets.fromLTRB(0.0, 35.0, 0.0, 0.0),
+        child: new Center(
+          child: new Text('正在加载中，莫着急哦~'),
+        ),
+      ),
+    ],
+  );
+}
+
+Future<Map> getSearchData(String searchText, int page) async {
+  var res;
   try {
-    Response response =
-        await Dio().get("http://www.baidu.com", queryParameters: {
-      'text': search_text,
+    Response response = await dio.get("/search", queryParameters: {
+      'query': searchText,
       'page': page,
     });
-    print(response);
+    res = response.data;
   } catch (e) {
     print(e);
   }
+  return res;
+}
+
+Future<Map> getDiseasDetail(String id) async {
+  var res;
+  try {
+    Response response = await dio.get("/disease/" + id);
+    res = response.data;
+//    print(res);
+  } catch (e) {
+    print(e);
+  }
+  return res;
 }
 
 class RetrivePage extends StatefulWidget {
@@ -34,9 +70,10 @@ class _RetrivePageState extends State<RetrivePage> {
           title: TextFieldWidget(),
           actions: <Widget>[
             IconButton(
+              // 搜索按钮
               icon: Icon(Icons.search),
               onPressed: () {
-                print('按下');
+                Provider.of<Diseases>(context).search();
               },
             ),
           ],
@@ -48,11 +85,17 @@ class _RetrivePageState extends State<RetrivePage> {
 }
 
 class TextFieldWidget extends StatelessWidget {
-  Widget buildTextField() {
+  final TextEditingController _textController = new TextEditingController();
+
+  Widget buildTextField(BuildContext context) {
     // theme设置局部主题
     return Theme(
       data: new ThemeData(primaryColor: Colors.grey),
       child: new TextField(
+        onChanged: (value) {
+          Provider.of<Diseases>(context).text = value;
+        },
+        controller: _textController,
         cursorColor: Colors.grey,
         // 默认设置
         decoration: InputDecoration(
@@ -81,7 +124,7 @@ class TextFieldWidget extends StatelessWidget {
       alignment: Alignment.center,
       height: 36,
       padding: EdgeInsets.fromLTRB(10.0, 0.0, 10.0, 0.0),
-      child: buildTextField(),
+      child: buildTextField(context),
     );
   }
 }
@@ -89,29 +132,32 @@ class TextFieldWidget extends StatelessWidget {
 class Diseases with ChangeNotifier {
   int page = 1;
   String text = '';
-  var _diseases = <Map<String, String>>[
-    {
-      'id': '1',
-      'title': '小儿发烧',
-      'desc':
-          '之前快速过了一些Flutter里的主要概念。比如Card，主要是用于将一组信息和动作放入一张卡片中，一般来说在超过三行就不适合列表了，可以考虑卡片。卡片也很灵活，它不仅可以包含图片、动作，也可以把不同类型的内容通过多张卡片在一个页面来展示给用户。'
-    }
-  ];
+  var _diseases = <dynamic>[];
+
   void refresh(String text) {
     // 网络请求
     _diseases = null;
     notifyListeners();
   }
 
-  void init() {
-    getData('', page);
-
-    // _diseases = getData('', page);
+  void init({bool loadmore: false}) async {
+    await getSearchData('', page).then((res) {
+      if (loadmore) {
+        _diseases.addAll(res['data']);
+      }
+      _diseases = res['data'];
+    });
+    notifyListeners();
   }
 
-  void search(String search_text) {
-    text = search_text;
-    getData(text, page);
+  void search({bool loadmore: false}) async {
+    if (text == '') return null;
+    await getSearchData(text, page).then((res) {
+      if (loadmore) {
+        _diseases.addAll(res['data']);
+      }
+      _diseases = res['data'];
+    });
     // _diseases = getData(text, page);
     notifyListeners();
   }
@@ -119,9 +165,9 @@ class Diseases with ChangeNotifier {
   void loadMore() {
     page = page + 1;
     if (text != '') {
-      search(text);
+      search(loadmore: true);
     } else {
-      init();
+      init(loadmore: true);
     }
   }
 
@@ -134,7 +180,14 @@ class DiseaseList extends StatefulWidget {
 }
 
 class _DiseaseListState extends State<DiseaseList> {
-  Widget _buildDieasesCard(Map<String, String> data) {
+  List diseases = [];
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Widget _buildDieasesCard(Map<String, dynamic> data) {
     return new Container(
         child: Card(
       elevation: 4.0,
@@ -142,10 +195,6 @@ class _DiseaseListState extends State<DiseaseList> {
       child: new Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          //   new Container(
-          //     child: Text(data['title']),
-          //     padding: EdgeInsets.only(left: 10, top: 20, bottom: 20),
-          //   ),
           ListTile(
             dense: false,
             title: Container(
@@ -165,12 +214,27 @@ class _DiseaseListState extends State<DiseaseList> {
             ),
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => DiseaseDetail(int.parse(data['id']))));
+                  builder: (context) => DiseaseDetail(data['id'])));
             },
           ),
         ],
       ),
     ));
+  }
+
+  Widget listBuilder(BuildContext context) {
+    if (diseases.length == 0) {
+      return loading();
+    } else {
+      return new ListView.builder(
+          //ListView的Item
+          itemBuilder: (context, index) {
+        if (index >= diseases.length) {
+          return null;
+        }
+        return _buildDieasesCard(diseases[index]);
+      });
+    }
   }
 
   GlobalKey<EasyRefreshState> _easyRefreshKey =
@@ -179,8 +243,17 @@ class _DiseaseListState extends State<DiseaseList> {
       new GlobalKey<RefreshHeaderState>();
   GlobalKey<RefreshFooterState> _footerKey =
       new GlobalKey<RefreshFooterState>();
+
   @override
   Widget build(BuildContext context) {
+    if (diseases.length == 0) {
+      Provider.of<Diseases>(context).init();
+      setState(() {
+        diseases = Provider.of<Diseases>(context).diseases;
+      });
+    }
+    print(diseases);
+    print(diseases.length);
     return Container(
         padding: EdgeInsets.all(10),
         child: new EasyRefresh(
@@ -200,15 +273,7 @@ class _DiseaseListState extends State<DiseaseList> {
             moreInfoColor: Colors.black54,
             showMore: true,
           ),
-          child: new ListView.builder(
-              //ListView的Item
-              itemBuilder: (context, index) {
-            if (index >= Provider.of<Diseases>(context).diseases.length) {
-              return null;
-            }
-            return _buildDieasesCard(
-                Provider.of<Diseases>(context).diseases[index]);
-          }),
+          child: listBuilder(context),
           loadMore: () async {
             await new Future.delayed(const Duration(seconds: 1), () {
               Provider.of<Diseases>(context).loadMore();
@@ -219,19 +284,34 @@ class _DiseaseListState extends State<DiseaseList> {
 }
 
 class DiseaseDetail extends StatefulWidget {
-  int id;
+  String id;
+
   DiseaseDetail(this.id);
+
   @override
   _DiseaseDetailState createState() => _DiseaseDetailState(id);
 }
 
-class _DiseaseDetailState extends State<DiseaseDetail> 
-  with SingleTickerProviderStateMixin {
-  int id;
+class _DiseaseDetailState extends State<DiseaseDetail>
+    with SingleTickerProviderStateMixin {
+  String id;
   String title;
   TabController _tabController;
+
   _DiseaseDetailState(this.id);
-  Map<String, String> detail;
+
+  Map<String, dynamic> detail;
+
+  getDetailData() async {
+    await getDiseasDetail(id).then((res) {
+      setState(() {
+        // print(res);
+        detail = res['data'];
+        title = res['name'];
+        _tabController = TabController(length: detail.keys.length, vsync: this);
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -244,9 +324,7 @@ class _DiseaseDetailState extends State<DiseaseDetail>
   void initState() {
     // TODO: implement initState
     super.initState();
-    detail = getDetail(this.id);
-    title = detail.remove('title');
-    _tabController = TabController(length: detail.keys.length, vsync: this);
+    getDetailData();
   }
 
   List<Tab> _getTabs() {
@@ -262,13 +340,39 @@ class _DiseaseDetailState extends State<DiseaseDetail>
   List<Widget> _getTabView() {
     var views = <Widget>[];
     for (var i in detail.keys) {
-      views.add(Text(detail[i]));
+      views.add(ListView(
+        padding: EdgeInsets.only(left: 20, right: 20, top: 15),
+        children: <Widget>[
+          Text(
+            '        ' + detail[i],
+            style: TextStyle(
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.left,
+            softWrap: true,
+          ),
+        ],
+      ));
+//      views.add(Container(
+//        margin: EdgeInsets.only(left: 20, right: 20, top: 15),
+//        child: Text(
+//          detail[i],
+//          style: TextStyle(fontSize: 18,),
+//          overflow: TextOverflow.visible,
+//        ),
+//      ));
+//      views.add(Text(detail[i]));
     }
     return views;
   }
 
   @override
   Widget build(BuildContext context) {
+    if ((detail == null) || (title == null)) {
+      return Scaffold(
+        body: loading(),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -284,8 +388,4 @@ class _DiseaseDetailState extends State<DiseaseDetail>
       ),
     );
   }
-}
-
-Map<String, String> getDetail(int id) {
-  return {'描述': '暂无', '并发症': '咳嗽', '治疗': '吃饭喝水', 'title': '小儿发烧'};
 }

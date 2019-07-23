@@ -30,11 +30,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.2
-  english_words: ^3.1.0
   keyboard_avoider: ^0.1.2
-  provider: ^2.0.1+1
-  dio: ^2.1.0
-  flutter_easyrefresh: ^1.2.7
+  provider: ^2.0.1+1 # 全局状态管理
+  dio: ^2.1.0 # 网络请求
+  flutter_easyrefresh: ^1.2.7 # 下拉上拉刷星
+  flutter_spinkit: "^2.1.0" # 加载过程动画
+ # keyboard_visibility: any #软键盘监听
 # 上面的方式是依赖pub仓库的，此外，我们还可以依赖本地包，git包
 # dependencies:
 #     pkg1:
